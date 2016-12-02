@@ -1,0 +1,93 @@
+
+<!doctype html>
+<html>
+    {% load staticfiles %}
+
+    <head>
+        <meta charset="utf-8">
+        <title>CodeExplorer</title>
+
+        <script type="text/javascript" src="{% static "js/jquery.min.js" %}"></script>
+        <script type="text/javascript" src="{% static "js/vis.min.js" %}"></script>
+
+        <link rel="stylesheet" type="text/css" href="{% static "css/ce.css" %}"></link>
+
+        <link rel="stylesheet" type="text/css" href="{% static "css/vis.min.css" %}"></link>
+        <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.min.css" %}"></link>
+        <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap-theme.min.css" %}"></link>
+     </head>
+
+    <body>
+        <div id="ceApp" class="row container-fluid">
+            <div id="ceGraph" class="col-md-8">
+                <script type="text/javascript" src="{% static "js/ce.vis_graph.js" %}"></script>
+            </div>
+
+            <div id="ceClass" class="col-md-3">
+                <form method="GET">
+                    <select id="ceClassSelector" onChange="ceClassSelectorChanged(this);">
+                    {% for n in ceNodes %}
+                        <option value="{{ n.id }}">{{ n.id }}</option>
+                    {% endfor %}
+                    </select>
+                </form>
+                <script>
+function setClassDepsDetails(iUl, iJson, iType) {
+    if (iType in iJson) {
+        iUl.empty();
+        for (var i = 0; i < iJson[iType].length; i++) {
+            iUl.append("<li>" + iJson[iType][i]["from"] + "</li>");
+        }
+    }
+}
+
+function ceClassSelectorChanged(iSelectCmp) {
+    aNodeId = iSelectCmp.value;
+
+    // Select node in graph
+    visNetwork.selectNodes( [aNodeId], true );
+
+    // Update details
+    var aXhttp = new XMLHttpRequest();
+
+    aXhttp.onreadystatechange = function() {
+        if (aXhttp.readyState == 4 && aXhttp.status == 200) {
+            var aClassDetail = JSON.parse(aXhttp.responseText);
+            $("#ceClassDetails > #id").text( aClassDetail["id"] );
+            $("#ceClassDetails > #name").text( aClassDetail["name"] );
+
+            setClassDepsDetails( $("#ceClassDetails > #deps_inheritance ul"), aClassDetail["deps"], "0" );
+            setClassDepsDetails( $("#ceClassDetails > #deps_composition ul"), aClassDetail["deps"], "1" );
+            setClassDepsDetails( $("#ceClassDetails > #deps_reference ul"), aClassDetail["deps"], "2" );
+        }
+    };
+
+    aXhttp.open("GET", "http://127.0.0.1:8080/CodeExplorer/node/" + aNodeId + "/", true);
+    aXhttp.send();
+}
+                </script>
+
+                <div id="ceClassDetails">
+                    <label id="id"></label>
+                    <label id="name"></label>
+                    <div id="deps_inheritance">
+                        <label>Parent of:</label>
+                        <ul>
+                        </ul>
+                    </div>
+                    <div id="deps_composition">
+                        <label>Owner of:</label>
+                        <ul>
+                        </ul>
+                    </div>
+                    <div id="deps_reference">
+                        <label>Used by:</label>
+                        <ul>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
