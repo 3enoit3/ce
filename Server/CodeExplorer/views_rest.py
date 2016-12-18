@@ -11,6 +11,8 @@ from django.template import Context, loader
 from django.http import Http404
 from collections import defaultdict
 import json
+import itertools
+import collections
 
 class JSONResponse(HttpResponse):
     """
@@ -47,8 +49,8 @@ class NodeRest(APIView):
         except ceNodes.DoesNotExist:
             raise Http404
 
-class GraphRest(APIView):
-    def buildOutputNode(self, iNode):
+def buildGraphVis():
+    def buildOutputNode(iNode):
         aProps = getTags(iNode.props)
         aOuputNode = {
                 'id': iNode.id,
@@ -58,20 +60,102 @@ class GraphRest(APIView):
                 }
         return aOuputNode
 
-    def buildOutputEdge(self, iEdge):
+    def buildOutputEdge(iEdge):
         aProps = getTags(iEdge.props)
         aOuputEdge = {
                 'from': iEdge.n1_id,
                 'to': iEdge.n2_id,
                 'type': aProps['type']
                 }
-        # aOuputEdge['label'] = aProps['name']
         if iEdge.directed:
             aOuputEdge['arrows'] = 'to'
         return aOuputEdge
 
-    def get(self, request):
-        aNodes = [self.buildOutputNode(n) for n in ceNodes.objects.all()]
-        aEdges = [self.buildOutputEdge(e) for e in ceEdges.objects.all()]
-        return JSONResponse( {'nodes':aNodes, 'edges':aEdges} )
+    aNodes = [buildOutputNode(n) for n in ceNodes.objects.all()]
+    aEdges = [buildOutputEdge(e) for e in ceEdges.objects.all()]
+    return {'nodes':aNodes, 'edges':aEdges}
+
+def buildGraphSigma():
+    aNewOutputId = itertools.count()
+    aNodeOutputIds = collections.defaultdict(int)
+
+    def buildOutputNode(iNode):
+        # Output id
+        aOutputId = aNewOutputId.next()
+        aNodeOutputIds[iNode.id] = aOutputId
+
+        # Add node
+        aProps = getTags(iNode.props)
+        aOuputNode = {
+                'id': str(aOutputId),
+                'label': iNode.id,
+                'size': len(ceEdges.objects.filter(n1_id=iNode.id)) + len(ceEdges.objects.filter(n1_id=iNode.id)) + 1,
+                'x': aOutputId,
+                'y': aOutputId
+                }
+        return aOuputNode
+
+    def buildOutputEdge(iEdge):
+        # Output id
+        aOutputId = aNewOutputId.next()
+
+        # Add edge
+        aProps = getTags(iEdge.props)
+        aOuputEdge = {
+                'id': str(aOutputId),
+                'source': str(aNodeOutputIds[iEdge.n1_id]),
+                'target': str(aNodeOutputIds[iEdge.n2_id])
+                }
+        return aOuputEdge
+
+    aNodes = [buildOutputNode(n) for n in ceNodes.objects.all()]
+    aEdges = [buildOutputEdge(e) for e in ceEdges.objects.all()]
+    return {'nodes':aNodes, 'edges':aEdges}
+
+def buildGraphD3():
+    aNewOutputId = itertools.count()
+    aNodeOutputIds = collections.defaultdict(int)
+
+    def buildOutputNode(iNode):
+        # Output id
+        aOutputId = aNewOutputId.next()
+        aNodeOutputIds[iNode.id] = aOutputId
+
+        # Add node
+        aProps = getTags(iNode.props)
+        aOuputNode = {
+                'id': str(aOutputId),
+                'label': iNode.id,
+                'size': len(ceEdges.objects.filter(n1_id=iNode.id)) + len(ceEdges.objects.filter(n1_id=iNode.id)) + 1,
+                }
+        return aOuputNode
+
+    def buildOutputEdge(iEdge):
+        # Output id
+        aOutputId = aNewOutputId.next()
+
+        # Add edge
+        aProps = getTags(iEdge.props)
+        aOuputEdge = {
+                'source': str(aNodeOutputIds[iEdge.n1_id]),
+                'target': str(aNodeOutputIds[iEdge.n2_id]),
+                'value' : 1
+                }
+        return aOuputEdge
+
+    aNodes = [buildOutputNode(n) for n in ceNodes.objects.all()]
+    aEdges = [buildOutputEdge(e) for e in ceEdges.objects.all()]
+    return {'nodes':aNodes, 'links':aEdges}
+
+class GraphRest(APIView):
+
+    def get(self, request, type):
+        aGraph = {}
+        if type == 'sigma':
+            aGraph = buildGraphSigma()
+        elif type == 'd3':
+            aGraph = buildGraphD3()
+        else:
+            aGraph = buildGraphVis()
+        return JSONResponse(aGraph)
 

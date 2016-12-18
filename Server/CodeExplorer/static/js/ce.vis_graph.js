@@ -75,6 +75,6 @@ aXhttp.onreadystatechange = function() {
 };
 
 // Get graph
-aXhttp.open("GET", "http://127.0.0.1:8080/CodeExplorer/graph", true);
+aXhttp.open("GET", "http://127.0.0.1:8080/CodeExplorer/graph/vis", true);
 aXhttp.send();
 

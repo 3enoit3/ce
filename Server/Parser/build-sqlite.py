@@ -29,10 +29,10 @@ def serializeGraphInSqlite(iNodes, iEdges, iPath):
 class Node:
     def __init__(self, iId):
         self._id = iId
-        self._props = {'dummy':'dummy'}
+        self._props = {}
 
     def __str__(self):
-        return "{} {}".format(self._id, self._props)
+        return "{}: {}".format(self._id, self._props)
 
 class Edge:
     def __init__(self, iNodes, iDirected = None):
@@ -46,14 +46,14 @@ class Edge:
                 "->" if self._directed else "-",
                 self._nodes[1] if self._directed == self._nodes[1] else self._nodes[0])
 
-        return "{} {}".format(aLink, self._props)
+        return "{}: {}".format(aLink, self._props)
 
 class Graph:
     def __init__(self):
         self._nodes = []
         self._edges = []
 
-        # Multi-edge hanlding
+        # Multi-edge hanlding: (node1, node2) -> type -> edge
         self._edgeLinks = {}
 
     # Nodes
@@ -62,12 +62,15 @@ class Graph:
 
     # Edges
     def addEdge(self, iEdge):
+        # create or update links between the two nodes
+        # TODO support directed edges
         aLinkKey = tuple(sorted(iEdge._nodes))
         aLinks = self._edgeLinks.get(aLinkKey)
         if not aLinks:
             aLinks = {}
             self._edgeLinks[aLinkKey] = aLinks
 
+        # create or update edge of this type
         aType = iEdge._props.get('type')
         aLink = aLinks.get(aType)
         if not aLink:
@@ -94,11 +97,16 @@ def readXmlCompound(iXml, ioGraph):
             aId = aClass.find("compoundname").text
             print "Processing class", aId
 
-            # Node
+            ### Node
             aNode = Node(aId)
             ioGraph.addNode(aNode)
 
-            # Edges
+            aNode._props.update({
+                'location_file': aClass.find("location").get('file'),
+                'body_file': aClass.find("location").get('bodyfile')
+                })
+
+            ### Edges
             aEdges = []
 
             # Inheritance
@@ -123,7 +131,10 @@ def readXmlCompound(iXml, ioGraph):
 
                 if aDependentId:
                     aEdge = Edge( (aDependentId, aId), aId )
-                    aEdge._props.update({ 'type': 'dependency', 'name': aFunction })
+                    aEdge._props.update({
+                        'type': 'dependency',
+                        'name': aFunction
+                        })
                     ioGraph.addEdge(aEdge)
 
 

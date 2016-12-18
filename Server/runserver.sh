@@ -1,6 +1,6 @@
 
 # publish data
-rm db.sqlite3
+rm -f db.sqlite3
 ln -s Parser/codeData.sqlite3 db.sqlite3
 
 # start server

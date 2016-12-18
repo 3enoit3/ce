@@ -10,6 +10,6 @@ urlpatterns = [
 
     # REST
     url(r'^node/(?P<node_id>\S+)/$', views_rest.NodeRest.as_view()),
-    url(r'^graph$', views_rest.GraphRest.as_view()),
+    url(r'^graph/(?P<type>\S+)$', views_rest.GraphRest.as_view()),
 ]
 
